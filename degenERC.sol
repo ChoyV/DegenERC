@@ -1,131 +1,227 @@
-///SPDX-License-Identifier: MIT
-
-pragma solidity^0.8.20;
-
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.19;
 
 import "./IERC20.sol";
 
-
-
+/**
+ * @title DegenERC
+ * @dev Implementation of the IERC20 interface with additional mint and burn functionalities
+ */
 abstract contract degenERC is IERC20 {
-address public owner;
-string public _name;
-uint256 public _totalSupply;
-string public _symbol;
-uint public _decimals;
+    address public owner;
+    string public _name;
+    uint256 public _totalSupply;
+    string public _symbol;
+    uint public _decimals;
 
-mapping(address=>uint) public _mintWhitelist;
-mapping(address=>uint) public _burnWhitelist;
-mapping(address=>uint) public _balances;
-mapping(address=>mapping(address=>uint)) internal _allowances;
-constructor (string memory name_,string memory symbol_, uint decimals_, uint mintApproveForOwner) {
-    owner = msg.sender;
-    _symbol = symbol_;
-    _name = name_;
-    _decimals=decimals_;
-    _mintWhitelist[owner] = mintApproveForOwner;
-    _burnWhitelist[owner] = type(uint).max;
-}
+    mapping(address => uint) public _mintWhitelist;
+    mapping(address => uint) public _burnWhitelist;
+    mapping(address => uint) public _balances;
+    mapping(address => mapping(address => uint)) public _allowances;
 
-
-
-function name() public view returns (string memory) {
-    return _name;
-}
-
-function symbol () public view returns (string memory) {
-    return _symbol;
-}
- 
-function decimals () public view returns (uint) {
-    return _decimals;
-}
-
-function totalSupply () public view returns (uint) {
-    return _totalSupply;
-}
-
-function balanceOf (address account) public view returns (uint) {
-    return balances[account];
-}
-
-function transfer (address from,address to,uint value) public returns (bool) {
-    require(value>=balances[from],'Value to send is more than balance');
-    balances[from]-=value;
-    balances[to]+=value;
-    emit Transfer(from, to, value);
-    return true;
-}
-
-function transferFrom (address from, address to, uint256 value) public view returns(bool) {
-    require (from != address(0),"");
-    require (_allowances[from][to]<=value, "Allowance is exceeded");
-    transfer(from,to,value);
-    return true;
-}
-
-
-function allowance (address owner, address spender) public view returns (uint) {
-    return _allowances[owner][spender];
-    
-}
-
-
-function approve (address owner, address spender, uint value, bool emitEvent) public virtual returns (bool) {
-require(owner == msg.sender, "Approval allowed only for owner");
-_approve(owner,spender,value, true);
-} 
-
-
-
-
-function _approve(address owner, address spender, uint value, bool emitEvent) internal {
-    require(owner=address(0), "Prohibited for 0 address");
-    require(spender=address(0), "Prohibited for 0 address");
-    _allowances[owner][spender] = value;
-    if (emitEvent) {
-        emit Approval(address indexed owner, address indexed spender, uint256 value);
-    }
-}
-
-
-function _spendAllowanance (address owner, address spender, uint value) internal virtual {
-    uint currentAllowance = allowance(owner, spender);
-    if (currentAllowance != type(uint256).max) {
-        if (currentAllowance<value) {
-            revert("You cant spend more than approved");
-        }
-        unchecked {
-            _approve (owner,spender,currentAllowance-value);
-        }
+    /**
+     * @dev Sets the values for {name}, {symbol}, {decimals}, {mintApproveForOwner}, and {totalSupply}.
+     * @param name_ Name of the token
+     * @param symbol_ Symbol of the token
+     * @param decimals_ Number of decimal places the token uses
+     * @param mintApproveForOwner Amount of tokens the owner is approved to mint
+     * @param totalSupply_ Initial total supply of the token
+     */
+    constructor(string memory name_, string memory symbol_, uint decimals_, uint mintApproveForOwner, uint totalSupply_) {
+        owner = msg.sender;
+        _symbol = symbol_;
+        _name = name_;
+        _totalSupply = totalSupply_;
+        _decimals = decimals_;
+        _mintWhitelist[owner] = mintApproveForOwner;
+        _burnWhitelist[owner] = type(uint).max;
     }
 
-}
+    /**
+     * @notice Returns the name of the token.
+     */
+    function name() public view virtual returns (string memory) {
+        return _name;
+    }
 
-function mint (address to, uint value) public virtual returns (bool) {
-    require(msg.sender == address(0), "Not available to mint for 0 address");
-    require (_mintWhitelist[msg.sender] >= value, "Unable to mint");
-    _totalSupply+=value;
-    _balances[to]+= value;
-    emit Transfer(address(0),to,value);
-}
+    /**
+     * @notice Returns the symbol of the token.
+     */
+    function symbol() public view virtual returns (string memory) {
+        return _symbol;
+    }
 
-function burn(address to, uint value) public virtual {
-    require (_burnWhitelist[msg.sender] >= value, "Unable to mint");
-    require(msg.sender == address(0), "Not available to mint for 0 address");
-    _totalSupply-=value;
-    _balances[to]-= value;
-    emit Transfer(msg.sender,address(0),value);
-}
+    /**
+     * @notice Returns the number of decimals the token uses.
+     */
+    function decimals() public view virtual returns (uint) {
+        return _decimals;
+    }
 
+    /**
+     * @notice Returns the total supply of the token.
+     */
+    function totalSupply() public view virtual returns (uint) {
+        return _totalSupply;
+    }
 
-function _updateMintWhitelist (address to, uint value) public override {
-    require(msg.sender == owner,"You are not an owner");
-    _mintWhitelist[to] = value;
-}
+    /**
+     * @notice Returns the balance of the specified address.
+     * @param account The address to query the balance of
+     * @return A uint representing the amount owned by the passed address
+     */
+    function balanceOf(address account) public view returns (uint) {
+        return _balances[account];
+    }
 
-function _updateBurnWhitelist (address to, uint value) public override {
-    require(msg.sender == owner,"You are not an owner");
-    _mintBurnlist[to] = value;
-}
+    /**
+     * @notice Returns the remaining number of tokens that spender is allowed to spend on behalf of _owner.
+     * @param _owner The owner of the tokens
+     * @param spender The address which will spend the funds
+     * @return A uint specifying the amount of tokens still available for the spender
+     */
+    function allowance(address _owner, address spender) public view returns (uint) {
+        return _allowances[_owner][spender];
+    }
+
+    /**
+     * @notice Transfer tokens to a specified address.
+     * @param to The address to transfer to
+     * @param value The amount to be transferred
+     * @return A boolean that indicates if the operation was successful
+     */
+    function transfer(address to, uint value) public returns (bool) {
+        address from = msg.sender;
+        _update(from, to, value);
+        return true;
+    }
+
+    /**
+     * @notice Transfer tokens from one address to another.
+     * @param from The address which you want to send tokens from
+     * @param to The address which you want to transfer to
+     * @param value The amount of tokens to be transferred
+     * @return A boolean that indicates if the operation was successful
+     */
+    function transferFrom(address from, address to, uint256 value) public returns (bool) {
+        require(from != address(0), "DegenERC: transfer from the zero address");
+        require(_allowances[from][msg.sender] >= value, "DegenERC: transfer amount exceeds allowance");
+        _spendAllowance(from, msg.sender, value);
+        _update(from, to, value);
+        return true;
+    }
+
+    /**
+     * @notice Approve the passed address to spend the specified amount of tokens on behalf of msg.sender.
+     * @param spender The address which will spend the funds
+     * @param value The amount of tokens to be spent
+     * @return A boolean that indicates if the operation was successful
+     */
+    function approve(address spender, uint value) public virtual returns (bool) {
+        address _owner = msg.sender;
+        _approve(_owner, spender, value, true);
+        return true;
+    }
+
+    /**
+     * @notice Mint tokens to a specified address.
+     * @param to The address to mint tokens to
+     * @param value The amount of tokens to be minted
+     */
+    function mint(address to, uint value) public virtual {
+        require(_mintWhitelist[msg.sender] >= value, "DegenERC: mint amount exceeds allowance");
+        address from = address(0);
+        _update(from, to, value);
+    }
+
+    /**
+     * @notice Burn tokens from a specified address.
+     * @param to The address from which tokens will be burned
+     * @param value The amount of tokens to be burned
+     */
+    function burn(address to, uint value) public virtual {
+        require(msg.sender != address(0), "DegenERC: burn from the zero address");
+        address from = msg.sender;
+        _update(from, to, value);
+    }
+
+    /**
+     * @notice Approve the passed address to spend the specified amount of tokens on behalf of _owner.
+     * @param _owner The owner of the tokens
+     * @param spender The address which will spend the funds
+     * @param value The amount of tokens to be spent
+     * @param emitEvent Boolean to indicate if an approval event should be emitted
+     */
+    function _approve(address _owner, address spender, uint value, bool emitEvent) internal {
+        require(_owner != address(0), "DegenERC: approve from the zero address");
+        require(spender != address(0), "DegenERC: approve to the zero address");
+        _allowances[_owner][spender] = value;
+        if (emitEvent) {
+            emit Approval(_owner, spender, value);
+        }
+    }
+
+    /**
+     * @notice Update allowance for a spender
+     * @param _owner The owner of the tokens
+     * @param spender The address which will spend the funds
+     * @param value The amount of tokens to be spent
+     */
+    function _spendAllowance(address _owner, address spender, uint value) internal virtual {
+        uint currentAllowance = allowance(_owner, spender);
+        if (currentAllowance != type(uint256).max) {
+            require(currentAllowance >= value, "DegenERC: insufficient allowance");
+            _approve(_owner, spender, currentAllowance - value, false);
+        }
+    }
+
+    /**
+     * @notice Update the mint whitelist for a specific address
+     * @param to The address to update the mint allowance for
+     * @param value The new mint allowance
+     */
+    function _updateMintWhitelist(address to, uint value) public virtual {
+        require(msg.sender == owner, "DegenERC: caller is not the owner");
+        _mintWhitelist[to] = value;
+    }
+
+    /**
+     * @notice Update the burn whitelist for a specific address
+     * @param to The address to update the burn allowance for
+     * @param value The new burn allowance
+     */
+    function _updateBurnWhitelist(address to, uint value) public virtual {
+        require(msg.sender == owner, "DegenERC: caller is not the owner");
+        _burnWhitelist[to] = value;
+    }
+
+    /**
+     * @notice Internal function to update balances and total supply
+     * @param from The address to transfer tokens from
+     * @param to The address to transfer tokens to
+     * @param value The amount of tokens to be transferred
+     */
+    function _update(address from, address to, uint256 value) internal virtual {
+        if (from == address(0)) {
+            _totalSupply += value;
+        } else {
+            uint256 fromBalance = _balances[from];
+            require(fromBalance >= value, "DegenERC: transfer amount exceeds balance");
+            unchecked {
+                _balances[from] = fromBalance - value;
+            }
+        }
+
+        if (to == address(0)) {
+            unchecked {
+                _totalSupply -= value;
+            }
+        } else {
+            unchecked {
+                _balances[to] += value;
+            }
+        }
+
+        emit Transfer(from, to, value);
+    }
 }
