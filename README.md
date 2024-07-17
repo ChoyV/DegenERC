@@ -29,3 +29,12 @@ The constructor initializes the token with a name, symbol, decimals, minting all
 - **burn(address to, uint256 value)**: Burns `value` tokens from the address `to`.
 - **_updateMintWhitelist(address to, uint256 value)**: Updates the mint allowance for a specific address.
 - **_updateBurnWhitelist(address to, uint256 value)**: Updates the burn allowance for a specific address.
+
+
+```
+       _                            _ _   
+__   _| | __ _ ___    _   _ ___  __| | |_ 
+\ \ / / |/ _` / __|  | | | / __|/ _` | __|
+ \ V /| | (_| \__ \  | |_| \__ \ (_| | |_ 
+  \_/ |_|\__,_|___/___\__,_|___/\__,_|\__|
+                 |_____|                  
