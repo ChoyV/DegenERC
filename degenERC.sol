@@ -12,12 +12,17 @@ abstract contract degenERC is IERC20 {
     string public _name;
     uint256 public _totalSupply;
     string public _symbol;
-    uint public _decimals;
+    uint8 public _decimals;
 
     mapping(address => uint) public _mintWhitelist;
     mapping(address => uint) public _burnWhitelist;
     mapping(address => uint) public _balances;
     mapping(address => mapping(address => uint)) public _allowances;
+
+    modifier onlyOwner () {
+        require(msg.sender == owner, "DegenERC: caller is not the owner");
+        _;
+    }
 
     /**
      * @dev Sets the values for {name}, {symbol}, {decimals}, {mintApproveForOwner}, and {totalSupply}.
@@ -54,7 +59,7 @@ abstract contract degenERC is IERC20 {
     /**
      * @notice Returns the number of decimals the token uses.
      */
-    function decimals() public view virtual returns (uint) {
+    function decimals() public view virtual returns (uint8) {
         return _decimals;
     }
 
@@ -130,6 +135,7 @@ abstract contract degenERC is IERC20 {
      */
     function mint(address to, uint value) public virtual {
         require(_mintWhitelist[msg.sender] >= value, "DegenERC: mint amount exceeds allowance");
+        _mintWhitelist[msg.sender]-= value;
         address from = address(0);
         _update(from, to, value);
     }
@@ -141,6 +147,8 @@ abstract contract degenERC is IERC20 {
      */
     function burn(address to, uint value) public virtual {
         require(msg.sender != address(0), "DegenERC: burn from the zero address");
+        require(_burnWhitelist[msg.sender] >= value, "DegenERC: mint amount exceeds allowance");
+        _burnWhitelist[msg.sender]-= value;
         address from = msg.sender;
         _update(from, to, value);
     }
@@ -175,13 +183,14 @@ abstract contract degenERC is IERC20 {
         }
     }
 
+    
+
     /**
      * @notice Update the mint whitelist for a specific address
      * @param to The address to update the mint allowance for
      * @param value The new mint allowance
      */
-    function _updateMintWhitelist(address to, uint value) public virtual {
-        require(msg.sender == owner, "DegenERC: caller is not the owner");
+    function _updateMintWhitelist(address to, uint value) public virtual onlyOwner {
         _mintWhitelist[to] = value;
     }
 
@@ -190,8 +199,7 @@ abstract contract degenERC is IERC20 {
      * @param to The address to update the burn allowance for
      * @param value The new burn allowance
      */
-    function _updateBurnWhitelist(address to, uint value) public virtual {
-        require(msg.sender == owner, "DegenERC: caller is not the owner");
+    function _updateBurnWhitelist(address to, uint value) public virtual onlyOwner {
         _burnWhitelist[to] = value;
     }
 
